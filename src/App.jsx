@@ -7,11 +7,12 @@ export default function App() {
   const [hexInput, setHexInput] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const [error, setError] = useState('');
+  const [forceSkip54, setForceSkip54] = useState(true);
 
   const parseHexDump = () => {
     setError('');
     try {
-      setParsedData(parseRollMessage(hexInput));
+      setParsedData(parseRollMessage(hexInput, { forceSkip54 }));
     } catch (err) {
       setParsedData(null);
       setError(err.message);
@@ -21,7 +22,7 @@ export default function App() {
   const loadSample = () => {
     setHexInput(sampleHexDump());
     setError('');
-    setParsedData(parseRollMessage(sampleHexDump()));
+    setParsedData(parseRollMessage(sampleHexDump(), { forceSkip54 }));
   };
 
   const exportToCSV = () => {
@@ -67,6 +68,14 @@ export default function App() {
             <button className="sample-btn" type="button" onClick={loadSample}>
               Load sample
             </button>
+            <label className="skip-toggle">
+              <input
+                type="checkbox"
+                checked={forceSkip54}
+                onChange={(e) => setForceSkip54(e.target.checked)}
+              />
+              Skip first 54 bytes
+            </label>
           </div>
         </div>
 

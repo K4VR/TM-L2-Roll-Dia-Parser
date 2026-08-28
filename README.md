@@ -25,7 +25,9 @@ The parser accepts:
 - Spaced or continuous hex streams (`0B 00 A8 00 …`)
 - Wireshark hex dumps with offset + ASCII columns
 - `hexdump -C` / `xxd` style lines
-- Full frames with the usual **54-byte Ethernet + IPv4 + TCP** prefix (no need to trim those headers first)
+- Full frames with a **54-byte Ethernet + IPv4 + TCP** prefix
+
+**Skip first 54 bytes** is on by default so you can paste a raw packet without trimming. Uncheck it only if the dump is already just the Msg 11 payload and the start is detected wrong.
 
 All multi-byte fields are **little-endian** (Word = uint16, Long = uint32, REAL = IEEE-754 float32). Roll IDs are 16-byte null-padded ASCII.
 

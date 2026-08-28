@@ -39,6 +39,7 @@ ${parserJs}
     let hexInput = '';
     let parsedData = null;
     let error = '';
+    let forceSkip54 = true;
 
     function rowClass(row) {
       if (isHeader(row.name)) return 'row-header';
@@ -58,7 +59,7 @@ ${parserJs}
     function parseHexDump() {
       error = '';
       try {
-        parsedData = parseRollMessage(hexInput);
+        parsedData = parseRollMessage(hexInput, { forceSkip54 });
       } catch (err) {
         parsedData = null;
         error = err.message;
@@ -69,7 +70,7 @@ ${parserJs}
     function loadSample() {
       hexInput = sampleHexDump();
       error = '';
-      parsedData = parseRollMessage(hexInput);
+      parsedData = parseRollMessage(hexInput, { forceSkip54 });
       render();
     }
 
@@ -131,6 +132,10 @@ ${parserJs}
               '<button class="parse-btn" type="button" id="parse-btn">Parse</button>' +
               '<button class="csv-btn" type="button" id="csv-btn"' + (parsedData ? '' : ' disabled') + '>Export CSV</button>' +
               '<button class="sample-btn" type="button" id="sample-btn">Load sample</button>' +
+              '<label class="skip-toggle">' +
+                '<input type="checkbox" id="skip54"' + (forceSkip54 ? ' checked' : '') + ' />' +
+                'Skip first 54 bytes' +
+              '</label>' +
             '</div>' +
           '</div>' +
           errorHtml + resultsHtml + emptyHtml +
@@ -141,6 +146,9 @@ ${parserJs}
       document.getElementById('parse-btn').addEventListener('click', parseHexDump);
       document.getElementById('csv-btn').addEventListener('click', exportToCSV);
       document.getElementById('sample-btn').addEventListener('click', loadSample);
+      document.getElementById('skip54').addEventListener('change', (e) => {
+        forceSkip54 = e.target.checked;
+      });
     }
 
     render();
