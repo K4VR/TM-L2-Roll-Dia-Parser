@@ -166,13 +166,19 @@ export function tcpPayloadOffset(bytes) {
  * like Msg 11 at offset 0) is still in the paste.
  */
 export function findPayloadStart(bytes) {
+  // Full Ethernet+IPv4+TCP (no options) + Msg 11 is 54 + 168.
+  // Prefer that over a 56-byte guess that leaves 166 payload bytes.
+  if (bytes.length === FIXED_FRAME_SKIP + EXPECTED_BYTES) {
+    return FIXED_FRAME_SKIP;
+  }
+
   const candidates = new Set([0]);
   const tcpStart = tcpPayloadOffset(bytes);
   if (tcpStart != null) candidates.add(tcpStart);
   if (bytes.length >= FIXED_FRAME_SKIP + 8) candidates.add(FIXED_FRAME_SKIP);
 
   const scanLimit = Math.min(bytes.length - 8, 256);
-  for (let i = 0; i <= scanLimit; i++) {
+  for (let i = 0; i <= scanLimit; i += 2) {
     if (readWord(bytes, i) === MSG_ROLL_PARAMETERS) candidates.add(i);
   }
 
@@ -185,6 +191,16 @@ export function findPayloadStart(bytes) {
       best = offset;
     }
   }
+
+  if (
+    best > 0 &&
+    bytes.length - best === EXPECTED_BYTES - 2 &&
+    best - 2 >= 0 &&
+    bytes.length - (best - 2) === EXPECTED_BYTES
+  ) {
+    return best - 2;
+  }
+
   return best;
 }
 
@@ -202,7 +218,7 @@ function shouldForceSkip54(capture) {
 export function parseRollMessage(hex, options = {}) {
   const capture = hexToBytes(hex);
   let skippedBytes = findPayloadStart(capture);
-  if (options.forceSkip54 && shouldForceSkip54(capture) && skippedBytes === 0) {
+  if (options.forceSkip54 && shouldForceSkip54(capture)) {
     skippedBytes = FIXED_FRAME_SKIP;
   }
 

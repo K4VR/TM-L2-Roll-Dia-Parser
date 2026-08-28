@@ -27,7 +27,7 @@ The parser accepts:
 - `hexdump -C` / `xxd` style lines
 - Full frames with a **54-byte Ethernet + IPv4 + TCP** prefix
 
-**Skip first 54 bytes** is on by default so you can paste a raw packet without trimming. Uncheck it only if the dump is already just the Msg 11 payload and the start is detected wrong.
+**Skip first 54 bytes** is on by default and now always skips exactly 54 (Ethernet + IPv4 + TCP). Uncheck it only if the dump is already just the Msg 11 payload.
 
 All multi-byte fields are **little-endian** (Word = uint16, Long = uint32, REAL = IEEE-754 float32). Roll IDs are 16-byte null-padded ASCII.
 
