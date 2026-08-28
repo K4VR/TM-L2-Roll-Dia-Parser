@@ -1,0 +1,23 @@
+{
+  "name": "tm-l2-roll-dia-parser",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Temper Mill Level 2 roll diameter (Msg 11) Wireshark hex parser",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.5",
+    "vitest": "^3.2.4"
+  }
+}
