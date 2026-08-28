@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { isHeader, isRollId, isSpare } from './parser/fields.js';
-import { csvFilename, parseRollMessage, resultsToCsv } from './parser/parse.js';
+import { csvFilename, formatParseSummary, parseRollMessage, resultsToCsv } from './parser/parse.js';
 import { sampleHexDump } from './parser/sample.js';
 
 export default function App() {
@@ -74,12 +74,7 @@ export default function App() {
 
         {parsedData && (
           <>
-            <div className="meta">
-              Parsed {parsedData.totalBytes} bytes — expected {parsedData.expectedBytes} bytes
-              {parsedData.totalBytes !== parsedData.expectedBytes
-                ? ' (length mismatch — extra or missing payload bytes)'
-                : ''}
-            </div>
+            <div className="meta">{formatParseSummary(parsedData)}</div>
             <div className="table-shell">
               <div className="table-scroll">
                 <table>

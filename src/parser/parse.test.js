@@ -2,14 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { EXPECTED_BYTES, FIELDS } from './fields.js';
 import {
   csvFilename,
+  findPayloadStart,
+  formatParseSummary,
   hexToBytes,
   parseRollMessage,
   readFloat,
   readLong,
   readWord,
   resultsToCsv,
+  tcpPayloadOffset,
 } from './parse.js';
-import { encodeSampleBytes, SAMPLE_VALUES, sampleHexDump, toWiresharkDump } from './sample.js';
+import {
+  encodeSampleBytes,
+  SAMPLE_VALUES,
+  sampleHexDump,
+  toWiresharkDump,
+  wrapWithEthernetIpv4Tcp,
+  wrapWithLeadingBytes,
+} from './sample.js';
 
 function field(parsed, name) {
   return parsed.results.find((row) => row.name === name);
@@ -111,6 +121,42 @@ describe('parseRollMessage', () => {
 
   it('throws when fewer than 8 header bytes are present', () => {
     expect(() => parseRollMessage('0B 00')).toThrow(/too short/i);
+  });
+
+  it('skips a 54-byte Ethernet+IPv4+TCP prefix on a full-frame paste', () => {
+    const payload = encodeSampleBytes();
+    const frame = wrapWithEthernetIpv4Tcp(payload);
+    expect(frame.length - payload.length).toBe(54);
+    expect(tcpPayloadOffset(frame)).toBe(54);
+
+    const parsed = parseRollMessage(toWiresharkDump(frame));
+    expect(parsed.skippedBytes).toBe(54);
+    expect(parsed.totalBytes).toBe(EXPECTED_BYTES);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
+    expect(Number(field(parsed, 'Upper BR Diameter').value)).toBeCloseTo(54.125, 5);
+    expect(field(parsed, 'Top Backup Roll ID').value).toBe('TBR-1042');
+    expect(formatParseSummary(parsed)).toContain('Skipped 54 framing bytes');
+  });
+
+  it('skips a 54-byte opaque prefix when Msg 11 starts after it', () => {
+    const parsed = parseRollMessage(toWiresharkDump(wrapWithLeadingBytes(encodeSampleBytes(), 54)));
+    expect(parsed.skippedBytes).toBe(54);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
+    expect(field(parsed, 'Sequence Number').value).toBe('5');
+  });
+
+  it('does not skip bytes when the paste is already the Msg 11 payload', () => {
+    const parsed = parseRollMessage(sampleHexDump());
+    expect(parsed.skippedBytes).toBe(0);
+    expect(findPayloadStart(encodeSampleBytes())).toBe(0);
+  });
+
+  it('skips Ethernet+TCP headers that include TCP options', () => {
+    const frame = wrapWithEthernetIpv4Tcp(encodeSampleBytes(), 12);
+    expect(tcpPayloadOffset(frame)).toBe(66);
+    const parsed = parseRollMessage(toWiresharkDump(frame));
+    expect(parsed.skippedBytes).toBe(66);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
   });
 });
 
