@@ -158,6 +158,43 @@ describe('parseRollMessage', () => {
     expect(parsed.skippedBytes).toBe(66);
     expect(field(parsed, 'Msg Number').value).toBe('11');
   });
+
+  it('still skips 54 bytes when offset 0 looks like a false Msg 11 (0B 00 A8 00 MAC)', () => {
+    const frame = wrapWithEthernetIpv4Tcp(encodeSampleBytes());
+    frame[0] = 0x0b;
+    frame[1] = 0x00;
+    frame[2] = 0xa8;
+    frame[3] = 0x00;
+    const parsed = parseRollMessage(toWiresharkDump(frame));
+    expect(parsed.skippedBytes).toBe(54);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
+    expect(field(parsed, 'Length').value).toBe('168');
+    expect(field(parsed, 'Top Backup Roll ID').value).toBe('TBR-1042');
+  });
+
+  it('force-skips 54 bytes when auto-detect would stay at 0 on a long paste', () => {
+    const prefix = Array.from({ length: 54 }, () => 0x11);
+    const parsed = parseRollMessage(
+      toWiresharkDump([...prefix, ...encodeSampleBytes()]),
+      { forceSkip54: true },
+    );
+    expect(parsed.skippedBytes).toBe(54);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
+  });
+
+  it('parses a single-space Wireshark dump without treating offsets as payload', () => {
+    const frame = wrapWithEthernetIpv4Tcp(encodeSampleBytes());
+    const lines = [];
+    for (let offset = 0; offset < frame.length; offset += 16) {
+      const slice = frame.slice(offset, offset + 16);
+      const hex = slice.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+      lines.push(`${offset.toString(16).padStart(4, '0')} ${hex}`);
+    }
+    const parsed = parseRollMessage(lines.join('\n'));
+    expect(parsed.skippedBytes).toBe(54);
+    expect(parsed.totalBytes).toBe(EXPECTED_BYTES);
+    expect(field(parsed, 'Msg Number').value).toBe('11');
+  });
 });
 
 describe('csv export', () => {

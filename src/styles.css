@@ -134,6 +134,23 @@ button {
   background: #334155;
 }
 
+.skip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+
+.skip-toggle input {
+  accent-color: #1d4ed8;
+}
+
 .error {
   background: #2a1215;
   border: 1px solid #7f1d1d;
