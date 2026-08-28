@@ -80,3 +80,44 @@ export function toWiresharkDump(bytes) {
 export function sampleHexDump() {
   return toWiresharkDump(encodeSampleBytes());
 }
+
+function be16(value) {
+  return [(value >> 8) & 0xff, value & 0xff];
+}
+
+/** Ethernet + IPv4 + TCP (no options = 54 header bytes) wrapping a payload. */
+export function wrapWithEthernetIpv4Tcp(payload, tcpOptionBytes = 0) {
+  const eth = [
+    0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+    0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb,
+    0x08, 0x00,
+  ];
+  const tcpHeaderLen = 20 + tcpOptionBytes;
+  const ipTotal = 20 + tcpHeaderLen + payload.length;
+  const ip = [
+    0x45, 0x00,
+    ...be16(ipTotal),
+    0x00, 0x00,
+    0x40, 0x00,
+    0x40, 0x06,
+    0x00, 0x00,
+    0x0a, 0x00, 0x00, 0x01,
+    0x0a, 0x00, 0x00, 0x02,
+  ];
+  const tcp = [
+    0x04, 0xd2,
+    0x13, 0x88,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00,
+    ((tcpHeaderLen / 4) << 4), 0x18,
+    0xff, 0xff,
+    0x00, 0x00,
+    0x00, 0x00,
+  ];
+  while (tcp.length < tcpHeaderLen) tcp.push(0);
+  return [...eth, ...ip, ...tcp, ...payload];
+}
+
+export function wrapWithLeadingBytes(payload, count) {
+  return [...Array.from({ length: count }, () => 0xaa), ...payload];
+}

@@ -13,7 +13,7 @@ That file is self-contained. It works offline aside from optional system fonts.
 
 ## Usage
 
-1. In Wireshark, copy the TCP payload as a hex dump (or copy the bytes as a hex stream).
+1. In Wireshark, copy the packet as a hex dump (the full frame is fine — Ethernet/TCP headers are skipped automatically).
 2. Paste into **Paste Wireshark Hex Dump**.
 3. Click **Parse**.
 4. Optionally **Export CSV**.
@@ -25,6 +25,7 @@ The parser accepts:
 - Spaced or continuous hex streams (`0B 00 A8 00 …`)
 - Wireshark hex dumps with offset + ASCII columns
 - `hexdump -C` / `xxd` style lines
+- Full frames with the usual **54-byte Ethernet + IPv4 + TCP** prefix (no need to trim those headers first)
 
 All multi-byte fields are **little-endian** (Word = uint16, Long = uint32, REAL = IEEE-754 float32). Roll IDs are 16-byte null-padded ASCII.
 

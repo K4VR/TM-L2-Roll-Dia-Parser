@@ -84,10 +84,6 @@ ${parserJs}
     }
 
     function render() {
-      const mismatch = parsedData && parsedData.totalBytes !== parsedData.expectedBytes
-        ? ' (length mismatch — extra or missing payload bytes)'
-        : '';
-
       const errorHtml = error ? '<div class="error">' + escapeHtml(error) + '</div>' : '';
 
       let resultsHtml = '';
@@ -108,8 +104,7 @@ ${parserJs}
         }).join('');
 
         resultsHtml =
-          '<div class="meta">Parsed ' + parsedData.totalBytes +
-          ' bytes — expected ' + parsedData.expectedBytes + ' bytes' + mismatch + '</div>' +
+          '<div class="meta">' + escapeHtml(formatParseSummary(parsedData)) + '</div>' +
           '<div class="table-shell"><div class="table-scroll"><table>' +
           '<thead><tr>' +
           '<th>Offset</th><th>Field Name</th><th>Type</th><th>Size</th>' +

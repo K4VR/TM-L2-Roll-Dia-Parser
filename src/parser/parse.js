@@ -100,12 +100,71 @@ function decodeField(field, bytes, offset) {
   return '';
 }
 
+const MSG_ROLL_PARAMETERS = 11;
+const MAX_REASONABLE_MSG_LEN = 4096;
+const FIXED_FRAME_SKIP = 54; // Ethernet 14 + IPv4 20 + TCP 20 (no options)
+
+function looksLikeMsg11(bytes, offset) {
+  if (offset + 8 > bytes.length) return false;
+  const msg = readWord(bytes, offset);
+  const length = readWord(bytes, offset + 2);
+  if (msg !== MSG_ROLL_PARAMETERS) return false;
+  if (length < 8 || length > MAX_REASONABLE_MSG_LEN) return false;
+  return bytes.length - offset >= 8;
+}
+
+/**
+ * Find Ethernet / IPv4 / TCP payload start.
+ * Standard headers with no VLAN or TCP options are 54 bytes.
+ */
+export function tcpPayloadOffset(bytes) {
+  if (bytes.length < 54) return null;
+  if (bytes[12] === undefined || bytes[13] === undefined) return null;
+
+  let i = 14;
+  let etherType = (bytes[12] << 8) | bytes[13];
+  if (etherType === 0x8100) {
+    if (bytes.length < 18) return null;
+    etherType = (bytes[16] << 8) | bytes[17];
+    i = 18;
+  }
+  if (etherType !== 0x0800) return null;
+
+  const version = bytes[i] >> 4;
+  const ihl = (bytes[i] & 0x0f) * 4;
+  if (version !== 4 || ihl < 20) return null;
+  if (bytes[i + 9] !== 6) return null;
+
+  const tcpStart = i + ihl;
+  if (tcpStart + 20 > bytes.length) return null;
+  const tcpLen = ((bytes[tcpStart + 12] >> 4) & 0x0f) * 4;
+  if (tcpLen < 20) return null;
+  const payload = tcpStart + tcpLen;
+  if (payload > bytes.length) return null;
+  return payload;
+}
+
+/**
+ * Skip link/transport framing so a full Wireshark frame paste works.
+ * Prefers a parsed Ethernet+IPv4+TCP payload, then a 54-byte prefix
+ * when Msg 11 starts there, and leaves payload-only pastes unchanged.
+ */
+export function findPayloadStart(bytes) {
+  const tcpStart = tcpPayloadOffset(bytes);
+  if (tcpStart != null && looksLikeMsg11(bytes, tcpStart)) return tcpStart;
+  if (looksLikeMsg11(bytes, 0)) return 0;
+  if (looksLikeMsg11(bytes, FIXED_FRAME_SKIP)) return FIXED_FRAME_SKIP;
+  return 0;
+}
+
 /**
  * Decode a Msg 11 roll-parameter payload.
  * Throws if the dump cannot cover the 8-byte header.
  */
 export function parseRollMessage(hex) {
-  const bytes = hexToBytes(hex);
+  const capture = hexToBytes(hex);
+  const skippedBytes = findPayloadStart(capture);
+  const bytes = capture.slice(skippedBytes);
 
   if (bytes.length < 8) {
     const error = new Error(
@@ -130,7 +189,21 @@ export function parseRollMessage(hex) {
     results,
     totalBytes: bytes.length,
     expectedBytes: EXPECTED_BYTES,
+    skippedBytes,
+    captureBytes: capture.length,
   };
+}
+
+export function formatParseSummary(parsed) {
+  const parts = [];
+  if (parsed.skippedBytes) {
+    parts.push(`Skipped ${parsed.skippedBytes} framing bytes`);
+  }
+  parts.push(`Parsed ${parsed.totalBytes} bytes — expected ${parsed.expectedBytes} bytes`);
+  if (parsed.totalBytes !== parsed.expectedBytes) {
+    parts.push('(length mismatch — extra or missing payload bytes)');
+  }
+  return parts.join(' · ');
 }
 
 export function resultsToCsv(parsedData) {
