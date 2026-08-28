@@ -195,6 +195,30 @@ describe('parseRollMessage', () => {
     expect(parsed.totalBytes).toBe(EXPECTED_BYTES);
     expect(field(parsed, 'Msg Number').value).toBe('11');
   });
+
+  it('does not keep a 56-byte skip when 54 leaves the expected 168-byte payload', () => {
+    const payload = encodeSampleBytes();
+    const prefix = Array.from({ length: 56 }, () => 0xaa);
+    prefix[54] = 0x00;
+    prefix[55] = 0x00;
+    const capture = [...prefix.slice(0, 54), ...payload];
+    expect(capture).toHaveLength(222);
+    const parsed = parseRollMessage(toWiresharkDump(capture), { forceSkip54: true });
+    expect(parsed.skippedBytes).toBe(54);
+    expect(parsed.totalBytes).toBe(EXPECTED_BYTES);
+    expect(field(parsed, 'Top Backup Roll ID').value).toBe('TBR-1042');
+    expect(field(parsed, 'Top Backup Roll ID').rawHex.startsWith('54 42 52 2D')).toBe(true);
+  });
+
+  it('overrides an auto 56-byte skip when Skip first 54 bytes is on', () => {
+    const payload = encodeSampleBytes();
+    const capture = [...Array.from({ length: 56 }, () => 0xaa), ...payload];
+    const auto = parseRollMessage(toWiresharkDump(capture));
+    expect(auto.skippedBytes).toBe(56);
+    const forced = parseRollMessage(toWiresharkDump(capture), { forceSkip54: true });
+    expect(forced.skippedBytes).toBe(54);
+    expect(forced.totalBytes).toBe(capture.length - 54);
+  });
 });
 
 describe('csv export', () => {
