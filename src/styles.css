@@ -18,7 +18,7 @@ body {
   min-height: 100vh;
   background: #0f1419;
   color: #c5cdd8;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'SF Mono', ui-monospace, monospace;
   padding: 24px;
 }
 
@@ -35,7 +35,7 @@ body {
 }
 
 h1 {
-  font-family: Inter, sans-serif;
+  font-family: Inter, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 22px;
   color: #e2e8f0;
@@ -101,7 +101,7 @@ button {
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  font-family: Inter, sans-serif;
+  font-family: Inter, 'Segoe UI', sans-serif;
 }
 
 .parse-btn {
@@ -225,7 +225,7 @@ tr:hover td {
 }
 
 .name-cell {
-  font-family: Inter, sans-serif;
+  font-family: Inter, 'Segoe UI', sans-serif;
   font-weight: 500;
 }
 
@@ -247,5 +247,5 @@ tr:hover td {
   padding: 48px 0;
   color: #334155;
   font-size: 13px;
-  font-family: Inter, sans-serif;
+  font-family: Inter, 'Segoe UI', sans-serif;
 }

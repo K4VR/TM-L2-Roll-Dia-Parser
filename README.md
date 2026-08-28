@@ -2,19 +2,14 @@
 
 Temper Mill Level 2 **Msg 11 — Roll Parameters** parser. Paste a Wireshark hex dump (or a raw hex stream) from the PLC / Level 2 roll-diameter message and decode diameters, crowns, roughness, and roll IDs.
 
-## Run locally
+## Open in a browser (no npm)
 
-```bash
-npm install
-npm run dev
-```
+You do **not** need Node or npm.
 
-Then open the printed local URL (default `http://localhost:5173`).
+1. Download [`parser.html`](parser.html) from this repo (or clone the repo).
+2. Double-click it, or open it in Chrome / Edge / Firefox (`File → Open`).
 
-```bash
-npm test        # parser unit tests
-npm run build   # production build
-```
+That file is self-contained. It works offline aside from optional system fonts.
 
 ## Usage
 
@@ -44,3 +39,14 @@ All multi-byte fields are **little-endian** (Word = uint16, Long = uint32, REAL 
 | 24 | Crown / roughness (top & bottom WR/BR) | REAL | 8 × 4 |
 | 56 | Top/Bottom WR/BR IDs | Byte×16 | 4 × 16 |
 | 120 | Spare 1–12 | REAL | 12 × 4 |
+
+## Optional: develop with Node
+
+Only if you want to change the parser source and rebuild `parser.html`:
+
+```bash
+npm install
+npm test
+npm run standalone   # regenerates parser.html
+npm run dev          # Vite preview at http://localhost:5173
+```
