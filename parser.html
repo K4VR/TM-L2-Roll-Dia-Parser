@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roll Diameter Parser — Msg 11</title>
+  <style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: #0f1419;
+}
+
+.page {
+  min-height: 100vh;
+  background: #0f1419;
+  color: #c5cdd8;
+  font-family: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'SF Mono', ui-monospace, monospace;
+  padding: 24px;
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-family: Inter, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: #e2e8f0;
+  letter-spacing: -0.02em;
+}
+
+.msg-tag {
+  font-size: 11px;
+  color: #475569;
+}
+
+.input-card {
+  background: #151d28;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #1e2a3a;
+}
+
+.input-card label {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+textarea {
+  width: 100%;
+  height: 140px;
+  background: #0b1017;
+  border: 1px solid #1e2a3a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+textarea:focus,
+button:focus {
+  outline: none;
+}
+
+textarea:focus {
+  border-color: #1d4ed8;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 8px 20px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: Inter, 'Segoe UI', sans-serif;
+}
+
+.parse-btn {
+  background: #1d4ed8;
+}
+
+.parse-btn:hover {
+  background: #2563eb;
+}
+
+.csv-btn {
+  background: #15803d;
+}
+
+.csv-btn:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.csv-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sample-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.sample-btn:hover {
+  background: #334155;
+}
+
+.error {
+  background: #2a1215;
+  border: 1px solid #7f1d1d;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  color: #fca5a5;
+  font-size: 12px;
+}
+
+.meta {
+  font-size: 11px;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.table-shell {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #1e2a3a;
+}
+
+.table-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #1e2a3a;
+  font-size: 12px;
+}
+
+th {
+  background: #151d28;
+  color: #7a8ba3;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  position: sticky;
+  top: 0;
+}
+
+tr:hover td {
+  background: #161f2b;
+}
+
+.row-header td {
+  color: #64748b;
+}
+
+.row-rollid td {
+  background: #0d2818;
+}
+
+.row-rollid:hover td {
+  background: #163524;
+}
+
+.row-rollid .val-cell {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.row-spare td {
+  color: #475569;
+  font-style: italic;
+}
+
+.row-data td.val-cell {
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+.val-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.offset-cell {
+  color: #475569;
+}
+
+.name-cell {
+  font-family: Inter, 'Segoe UI', sans-serif;
+  font-weight: 500;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.size-cell {
+  text-align: center;
+}
+
+.hex-cell {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.empty {
+  text-align: center;
+  padding: 48px 0;
+  color: #334155;
+  font-size: 13px;
+  font-family: Inter, 'Segoe UI', sans-serif;
+}
+
+    html, body { min-height: 100%; }
+    #app { min-height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+/**
+ * Msg 11 — Roll Parameters
+ * Little-endian PLC / Level 2 binary layout.
+ *
+ * Word  = uint16 LE
+ * Long  = uint32 LE
+ * REAL  = IEEE-754 float32 LE
+ * Byte*16 = ASCII, null-padded to 16 bytes
+ */
+const FIELDS = [
+  { name: 'Msg Number', desc: 'Msg identifier 11=Roll parameters', type: 'Word', size: 2 },
+  { name: 'Length', desc: 'Total Length of the message', type: 'Word', size: 2 },
+  { name: 'Sequence Number', desc: 'Incremented each message sent', type: 'Long', size: 4 },
+  { name: 'Upper BR Diameter', desc: 'Upper backup roll diameter', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Lower BR Diameter', desc: 'Lower backup roll diameter', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Upper WR Diameter', desc: 'Upper work roll diameter', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Lower WR Diameter', desc: 'Lower work roll diameter', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Top Backup Roll Crown', desc: 'Upper backup roll crown', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Top Backup Roll Roughness', desc: 'Upper backup roll roughness', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Top Work Roll Crown', desc: 'Upper work roll crown', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Top Work Roll Roughness', desc: 'Upper work roll roughness', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Bottom Work Roll Crown', desc: 'Lower work roll crown', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Bottom Work Roll Roughness', desc: 'Lower work roll roughness', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Bottom Backup Roll Crown', desc: 'Lower backup roll crown', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Bottom Backup Roll Roughness', desc: 'Lower backup roll roughness', type: 'REAL', size: 4, unit: 'inch' },
+  { name: 'Top Backup Roll ID', desc: 'Top Backup Roll ID', type: 'Byte*16', size: 16 },
+  { name: 'Top Work Roll ID', desc: 'Top Work Roll ID', type: 'Byte*16', size: 16 },
+  { name: 'Bottom Work Roll ID', desc: 'Bottom Work Roll ID', type: 'Byte*16', size: 16 },
+  { name: 'Bottom Backup Roll ID', desc: 'Bottom Backup Roll ID', type: 'Byte*16', size: 16 },
+  { name: 'Spare 1', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 2', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 3', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 4', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 5', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 6', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 7', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 8', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 9', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 10', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 11', desc: '', type: 'REAL', size: 4 },
+  { name: 'Spare 12', desc: '', type: 'REAL', size: 4 },
+];
+
+const EXPECTED_BYTES = FIELDS.reduce((sum, field) => sum + field.size, 0);
+
+const HEADER_FIELDS = new Set(['Msg Number', 'Length', 'Sequence Number']);
+
+function isRollId(type) {
+  return type === 'Byte*16';
+}
+
+function isSpare(name) {
+  return name.startsWith('Spare');
+}
+
+function isHeader(name) {
+  return HEADER_FIELDS.has(name);
+}
+
+const WIRESHARK_OFFSET =
+  /^(?:0x)?[0-9A-Fa-f]{4,8}(?::\s+|\s{2,})[0-9A-Fa-f]{2}/;
+
+/**
+ * Convert pasted hex (raw stream or Wireshark-style dump) into a byte array.
+ * Dump offsets and ASCII trailers are stripped so they are not decoded as payload.
+ */
+function hexToBytes(hex) {
+  const text = String(hex ?? '').trim();
+  if (!text) return [];
+
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const dumpLines = lines.filter((line) => looksLikeDumpLine(line));
+
+  if (dumpLines.length > 0 && dumpLines.length >= Math.ceil(lines.length * 0.4)) {
+    const bytes = [];
+    for (const line of dumpLines) {
+      bytes.push(...bytesFromDumpLine(line));
+    }
+    return bytes;
+  }
+
+  const cleaned = text.replace(/0x/gi, '').replace(/[^0-9A-Fa-f]/g, '');
+  const bytes = [];
+  for (let i = 0; i + 1 < cleaned.length; i += 2) {
+    bytes.push(parseInt(cleaned.slice(i, i + 2), 16));
+  }
+  return bytes;
+}
+
+function looksLikeDumpLine(line) {
+  if (/offset|ascii|hex dump/i.test(line)) return false;
+  return WIRESHARK_OFFSET.test(line);
+}
+
+function bytesFromDumpLine(line) {
+  const withoutAsciiPipes = line.replace(/\s*\|.*\|?\s*$/, '');
+  const rest = withoutAsciiPipes.replace(/^(?:0x)?[0-9A-Fa-f]{4,8}:?\s+/, '');
+  const tokens = [];
+
+  for (const part of rest.split(/\s+/)) {
+    if (/^[0-9A-Fa-f]{2}$/.test(part)) {
+      tokens.push(part);
+    } else if (/^[0-9A-Fa-f]{4,}$/.test(part) && part.length % 2 === 0) {
+      for (let i = 0; i < part.length; i += 2) tokens.push(part.slice(i, i + 2));
+    } else {
+      break;
+    }
+    if (tokens.length >= 16) break;
+  }
+
+  return tokens.map((token) => parseInt(token, 16));
+}
+
+function readWord(bytes, offset) {
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function readLong(bytes, offset) {
+  return (
+    (bytes[offset] |
+      (bytes[offset + 1] << 8) |
+      (bytes[offset + 2] << 16) |
+      (bytes[offset + 3] << 24)) >>>
+    0
+  );
+}
+
+function readFloat(bytes, offset) {
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+  for (let i = 0; i < 4; i++) view.setUint8(i, bytes[offset + i]);
+  return view.getFloat32(0, true);
+}
+
+function readString(bytes, offset, length) {
+  let str = '';
+  for (let i = 0; i < length; i++) {
+    const b = bytes[offset + i];
+    if (b === 0) break;
+    str += String.fromCharCode(b);
+  }
+  return str;
+}
+
+function getRawHex(bytes, offset, size) {
+  return bytes
+    .slice(offset, offset + size)
+    .map((b) => b.toString(16).toUpperCase().padStart(2, '0'))
+    .join(' ');
+}
+
+function decodeField(field, bytes, offset) {
+  if (field.type === 'Word') return readWord(bytes, offset).toString();
+  if (field.type === 'Long') return readLong(bytes, offset).toString();
+  if (field.type === 'REAL') return readFloat(bytes, offset).toFixed(6);
+  if (field.type === 'Byte*16') return readString(bytes, offset, field.size);
+  return '';
+}
+
+/**
+ * Decode a Msg 11 roll-parameter payload.
+ * Throws if the dump cannot cover the 8-byte header.
+ */
+function parseRollMessage(hex) {
+  const bytes = hexToBytes(hex);
+
+  if (bytes.length < 8) {
+    const error = new Error(
+      `Hex dump too short. Got ${bytes.length} bytes, need at least 8 for the header.`,
+    );
+    error.code = 'TOO_SHORT';
+    throw error;
+  }
+
+  let offset = 0;
+  const results = [];
+
+  for (const field of FIELDS) {
+    const hasData = offset + field.size <= bytes.length;
+    const rawHex = hasData ? getRawHex(bytes, offset, field.size) : '';
+    const value = hasData ? decodeField(field, bytes, offset) : '—';
+    results.push({ ...field, offset, value, rawHex, hasData });
+    offset += field.size;
+  }
+
+  return {
+    results,
+    totalBytes: bytes.length,
+    expectedBytes: EXPECTED_BYTES,
+  };
+}
+
+function resultsToCsv(parsedData) {
+  const header = 'Field Name,Description,Data Type,Byte Size,Offset,Raw Hex,Value,Unit';
+  const rows = parsedData.results.map((r) =>
+    [r.name, r.desc, r.type, r.size, r.offset, r.rawHex, r.value, r.unit || '']
+      .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+      .join(','),
+  );
+  return `${header}\n${rows.join('\n')}\n`;
+}
+
+function csvFilename(date = new Date()) {
+  return `roll_diameter_parsed_${date.toISOString().slice(0, 19).replace(/[:.]/g, '-')}.csv`;
+}
+
+function padString(value, length) {
+  const bytes = Array.from({ length }, () => 0);
+  const chars = String(value);
+  for (let i = 0; i < Math.min(chars.length, length); i++) {
+    bytes[i] = chars.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function writeWord(value) {
+  return [value & 0xff, (value >> 8) & 0xff];
+}
+
+function writeLong(value) {
+  return [
+    value & 0xff,
+    (value >> 8) & 0xff,
+    (value >> 16) & 0xff,
+    (value >> 24) & 0xff,
+  ];
+}
+
+function writeFloat(value) {
+  const buffer = new ArrayBuffer(4);
+  new DataView(buffer).setFloat32(0, value, true);
+  return Array.from(new Uint8Array(buffer));
+}
+
+/** Representative temper-mill Msg 11 payload used by "Load sample". */
+const SAMPLE_VALUES = {
+  'Msg Number': 11,
+  Length: 168,
+  'Sequence Number': 5,
+  'Upper BR Diameter': 54.125,
+  'Lower BR Diameter': 54.25,
+  'Upper WR Diameter': 21.5,
+  'Lower WR Diameter': 21.48,
+  'Top Backup Roll Crown': 0.0025,
+  'Top Backup Roll Roughness': 0.000032,
+  'Top Work Roll Crown': 0.0018,
+  'Top Work Roll Roughness': 0.000028,
+  'Bottom Work Roll Crown': 0.0017,
+  'Bottom Work Roll Roughness': 0.000029,
+  'Bottom Backup Roll Crown': 0.0024,
+  'Bottom Backup Roll Roughness': 0.000031,
+  'Top Backup Roll ID': 'TBR-1042',
+  'Top Work Roll ID': 'TWR-2218',
+  'Bottom Work Roll ID': 'BWR-2219',
+  'Bottom Backup Roll ID': 'BBR-1043',
+};
+
+function encodeSampleBytes(values = SAMPLE_VALUES) {
+  const bytes = [];
+  for (const field of FIELDS) {
+    const value = values[field.name];
+    if (field.type === 'Word') bytes.push(...writeWord(value ?? 0));
+    else if (field.type === 'Long') bytes.push(...writeLong(value ?? 0));
+    else if (field.type === 'REAL') bytes.push(...writeFloat(value ?? 0));
+    else if (field.type === 'Byte*16') bytes.push(...padString(value ?? '', field.size));
+  }
+  return bytes;
+}
+
+function toWiresharkDump(bytes) {
+  const lines = [];
+  for (let offset = 0; offset < bytes.length; offset += 16) {
+    const slice = bytes.slice(offset, offset + 16);
+    const hex = slice.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+    const ascii = slice
+      .map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.'))
+      .join('');
+    const paddedHex = hex.padEnd(47, ' ');
+    lines.push(`${offset.toString(16).padStart(4, '0')}  ${paddedHex}  ${ascii}`);
+  }
+  return lines.join('\n');
+}
+
+function sampleHexDump() {
+  return toWiresharkDump(encodeSampleBytes());
+}
+
+
+    const app = document.getElementById('app');
+    let hexInput = '';
+    let parsedData = null;
+    let error = '';
+
+    function rowClass(row) {
+      if (isHeader(row.name)) return 'row-header';
+      if (isRollId(row.type)) return 'row-rollid';
+      if (isSpare(row.name)) return 'row-spare';
+      return 'row-data';
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function parseHexDump() {
+      error = '';
+      try {
+        parsedData = parseRollMessage(hexInput);
+      } catch (err) {
+        parsedData = null;
+        error = err.message;
+      }
+      render();
+    }
+
+    function loadSample() {
+      hexInput = sampleHexDump();
+      error = '';
+      parsedData = parseRollMessage(hexInput);
+      render();
+    }
+
+    function exportToCSV() {
+      if (!parsedData) return;
+      const blob = new Blob([resultsToCsv(parsedData)], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = csvFilename();
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function render() {
+      const mismatch = parsedData && parsedData.totalBytes !== parsedData.expectedBytes
+        ? ' (length mismatch — extra or missing payload bytes)'
+        : '';
+
+      const errorHtml = error ? '<div class="error">' + escapeHtml(error) + '</div>' : '';
+
+      let resultsHtml = '';
+      if (parsedData) {
+        const rows = parsedData.results.map((row) => {
+          const title = row.desc ? ' title="' + escapeHtml(row.desc) + '"' : '';
+          return (
+            '<tr class="' + rowClass(row) + '">' +
+              '<td class="offset-cell">' + row.offset + '</td>' +
+              '<td class="name-cell"' + title + '>' + escapeHtml(row.name) + '</td>' +
+              '<td class="muted">' + escapeHtml(row.type) + '</td>' +
+              '<td class="muted size-cell">' + row.size + '</td>' +
+              '<td class="hex-cell">' + escapeHtml(row.rawHex) + '</td>' +
+              '<td class="val-cell">' + escapeHtml(row.value) + '</td>' +
+              '<td class="muted">' + escapeHtml(row.unit || '') + '</td>' +
+            '</tr>'
+          );
+        }).join('');
+
+        resultsHtml =
+          '<div class="meta">Parsed ' + parsedData.totalBytes +
+          ' bytes — expected ' + parsedData.expectedBytes + ' bytes' + mismatch + '</div>' +
+          '<div class="table-shell"><div class="table-scroll"><table>' +
+          '<thead><tr>' +
+          '<th>Offset</th><th>Field Name</th><th>Type</th><th>Size</th>' +
+          '<th>Raw Hex</th><th>Value</th><th>Unit</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+      }
+
+      const emptyHtml = (!parsedData && !error)
+        ? '<div class="empty">Paste hex data above and click Parse to decode roll parameter message</div>'
+        : '';
+
+      app.innerHTML =
+        '<div class="page"><div class="wrap">' +
+          '<div class="title-row">' +
+            '<h1>Roll Diameter Parser</h1>' +
+            '<span class="msg-tag">Msg 11 — Roll Parameters</span>' +
+          '</div>' +
+          '<div class="input-card">' +
+            '<label for="hex-input">Paste Wireshark Hex Dump</label>' +
+            '<textarea id="hex-input" placeholder="0000  0b 00 a8 00 05 00 00 00 00 00 59 42  ...">' +
+              escapeHtml(hexInput) +
+            '</textarea>' +
+            '<div class="btn-row">' +
+              '<button class="parse-btn" type="button" id="parse-btn">Parse</button>' +
+              '<button class="csv-btn" type="button" id="csv-btn"' + (parsedData ? '' : ' disabled') + '>Export CSV</button>' +
+              '<button class="sample-btn" type="button" id="sample-btn">Load sample</button>' +
+            '</div>' +
+          '</div>' +
+          errorHtml + resultsHtml + emptyHtml +
+        '</div></div>';
+
+      const textarea = document.getElementById('hex-input');
+      textarea.addEventListener('input', (e) => { hexInput = e.target.value; });
+      document.getElementById('parse-btn').addEventListener('click', parseHexDump);
+      document.getElementById('csv-btn').addEventListener('click', exportToCSV);
+      document.getElementById('sample-btn').addEventListener('click', loadSample);
+    }
+
+    render();
+  </script>
+</body>
+</html>
