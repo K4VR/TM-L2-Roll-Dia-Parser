@@ -197,7 +197,11 @@ tr:hover td {
   background: #0d2818;
 }
 
-.row-rollid td:last-child {
+.row-rollid:hover td {
+  background: #163524;
+}
+
+.row-rollid .val-cell {
   color: #4ade80;
   font-weight: 600;
 }
